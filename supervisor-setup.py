@@ -1,9 +1,7 @@
 import os
+import common as mm
 def write_supervisor_conf(aimdir = "/etc/supervisor/conf.d/MIVerification-server.conf"):
-    current_file_path = os.path.abspath(__file__)
-    app_file_path = os.path.join(os.path.dirname(current_file_path), 'app.py')
-    app_file_path = os.path.abspath(app_file_path)
-
+    app_file_path = mm.get_abs_path("app.py")
     templateFile = "template/MIVerification-server.conf"
 
     content = ""
@@ -14,5 +12,12 @@ def write_supervisor_conf(aimdir = "/etc/supervisor/conf.d/MIVerification-server
         conf_file.write(content)
     print(f"Supervisor configuration written to {aimdir}")
 
+def restart_supervisor():
+    os.system("supervisorctl reread")
+    os.system("supervisorctl update")
+    os.system("supervisorctl restart MIVerification-server")
+    print("Supervisor service restarted")
+
 if __name__ == "__main__":
     write_supervisor_conf()
+    restart_supervisor()

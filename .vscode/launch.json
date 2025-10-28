@@ -1,0 +1,62 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Python Debugger: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONPATH": "${workspaceRoot}"
+      }
+    },
+    {
+      "name": "使用msvc编译器生成和调试活动文件",
+      "type": "cppvsdbg",
+      "request": "launch",
+      "program": "${fileDirname}/build/debug/${fileBasenameNoExtension}",
+      "args": [
+        "\\I"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${fileDirname}",
+      "environment": [
+        {
+          "name": "LANG",
+          "value": "zh_CN.UTF-8"
+        },
+        {
+          "name": "LC_ALL",
+          "value": "zh_CN.UTF-8"
+        }
+      ],
+      "console": "externalTerminal",
+      "preLaunchTask": "build cpp with python",
+      "logging": {
+        "engineLogging": false,
+        "trace": false,
+        "traceResponse": false
+      }
+    },
+    {
+      "name": "C/C++ Runner: Debug Session",
+      "type": "cppdbg",
+      "request": "launch",
+      "args": [],
+      "stopAtEntry": false,
+      "externalConsole": true,
+      "cwd": "d:/MIVerification/code/cpp",
+      "program": "d:/MIVerification/code/cpp/build/Debug/outDebug",
+      "MIMode": "gdb",
+      "miDebuggerPath": "gdb",
+      "setupCommands": [
+        {
+          "description": "Enable pretty-printing for gdb",
+          "text": "-enable-pretty-printing",
+          "ignoreFailures": true
+        }
+      ]
+    }
+  ]
+}

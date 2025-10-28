@@ -14,11 +14,11 @@ def check_permissions(file_path = "/etc/nginx/sites-enabled/"):
 
 
 def write_nginx_conf(aimdir = "/etc/nginx/sites-enabled/"):
-    cert_path = mm.get_abs_path("cert.pem")
-    key_path = mm.get_abs_path("privkey.pem")
+    cert_path = mm.get_abs_path("cert/cert.pem")
+    key_path = mm.get_abs_path("cert/privkey.pem")
     app_static_path = mm.get_abs_path("static")
 
-    key_content = mm.get_secret_key()
+    key_content = getpass.getpass("请输入SSL私钥内容（留空则使用已有文件）:\n")
     if key_content is None or key_content.strip() == "":
         if not os.path.exists(key_path):
             print("私钥文件不存在，无法继续")
@@ -26,6 +26,12 @@ def write_nginx_conf(aimdir = "/etc/nginx/sites-enabled/"):
         else:
             print(f"私钥文件已存在于 {key_path}，继续使用该文件")
     else:
+        lines = []
+        for i in range(0, len(key_content), 64):
+            lines.append(key_content[i:i+64])
+        lines.insert(0, "-----BEGIN PRIVATE KEY-----")
+        lines.append("-----END PRIVATE KEY-----")
+        key_content = "\n".join(lines)
         with open(key_path, 'w') as key_file:
             key_file.write(key_content)
         os.chmod(key_path, 0o600)

@@ -8,6 +8,7 @@ from datetime import datetime
 
 # Load environment variables
 load_dotenv()
+server_version = "0.1.0"
 
 def create_app(config=None):
     """Application factory pattern"""
@@ -74,6 +75,15 @@ def create_app(config=None):
                 'file_name': file_name
             }
         }), 201
+    
+    @app.route('/api/version')
+    def version():
+        return jsonify({
+            'version': server_version,
+            'status': 'success',
+            'message': 'Server version fetched successfully'
+        })
+    
 
     return app
 

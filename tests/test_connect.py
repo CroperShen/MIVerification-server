@@ -4,8 +4,8 @@ from urllib3.exceptions import MaxRetryError, ConnectTimeoutError
 import time
 
 server_ip = "47.109.185.70"
-server_port = 5000
-url = f"http://{server_ip}:{server_port}"
+server_port = 443
+url = f"https://{server_ip}:{server_port}/api/verify"
 
 def test_connection(retries=5, delay=2):
     for attempt in range(retries):

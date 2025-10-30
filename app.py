@@ -2,13 +2,13 @@
 Main Flask application
 """
 import os
-from flask import Flask,request,jsonify
+from flask import Flask, logging,request,jsonify
 from dotenv import load_dotenv
 from datetime import datetime
 
 # Load environment variables
 load_dotenv()
-server_version = "0.1.0"
+server_version = "0.1.1"
 
 def create_app(config=None):
     """Application factory pattern"""
@@ -91,6 +91,9 @@ def create_app(config=None):
 
 if __name__ == '__main__':
     app = create_app()
+    logging.getLogger('werkzeug').setLevel(logging.INFO)
+    # 强制 app 自身日志级别为 INFO
+    app.logger.setLevel(logging.INFO)
     app.run(
         host=app.config['HOST'],
         port=app.config['PORT'],

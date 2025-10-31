@@ -6,6 +6,9 @@ from flask import Flask, logging,request,jsonify
 from dotenv import load_dotenv
 from datetime import datetime
 import logging
+import json
+import upload
+import regex
 
 # Load environment variables
 load_dotenv()
@@ -64,6 +67,7 @@ def create_app(config=None):
         if 'rule_file' not in request.files:
             return jsonify({'status': 'error', 'message': 'No file part in the request'}), 400
         file = request.files['rule_file']
+
         time_now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         file_name = f'static/rules/rule_{time_now}.bin'
         if not os.path.exists('static/rules'):
@@ -76,6 +80,115 @@ def create_app(config=None):
                 'file_name': file_name
             }
         }), 201
+    
+    @app.route('/api/create_app_upload_task', methods=['POST'])
+    def create_version_file_upload_task():
+        version = request.form["version"]
+        is_debug = request.form.get("is_debug", "false").lower() == "true"
+        file_size = request.form["file_size"]
+        file_md5 = request.form["file_md5"]
+        desc = request.form.get("desc", "")
+        replace_existing = request.form.get("replace_existing", "false").lower() == "true"
+
+        #checkfilesizevalid
+        if not isinstance(file_size, int):
+            if isinstance(file_size, str):
+                try:
+                    file_size = int(file_size)
+                except (TypeError, ValueError):
+                    return jsonify({'status': 'error', 'message': 'Invalid file size'}), 400
+            else:
+                return jsonify({'status': 'error', 'message': 'Invalid file size'}), 400
+        
+        #check version valid
+        version_pattern = r'^\d+\.\d+\.\d+[a-z]?$'  # e.g., 1.0.0 or  1.0.0a
+        file_dir = f"files/apps/releases/{version}/"
+        if is_debug:
+            version_pattern = r'^\d+\.\d+\.\d+\.(\d+)$'  # e.g., 1.0.0.1234 for debug versions
+            file_dir = f"files/apps/debug/{version}/"
+        if not regex.match(version_pattern, version):
+            return jsonify({'status': 'error', 'message': 'Invalid version format'}), 400
+        
+        if (os.path.exists(file_dir) and not replace_existing):
+            return jsonify({'status': 'error', 'message': 'Version already exists'}), 400
+        
+        with open('file/apps/index.json', 'r') as f:
+            data = json.load(f)
+            buildno = data.get("build_no",1)
+            
+        extra_data = {
+            "version": version,
+            "is_debug": is_debug,
+            "build_no": buildno,
+            "desc": desc
+        }
+        taskInfo = upload.create_upload_task(file_md5,file_size,file_dir, extra_data)
+        task_id = taskInfo["task_id"]
+        return jsonify({
+            'status': 'success',
+            'task_id': task_id,
+        }), 201
+
+        
+
+
+        if not version or not filemd5:
+            return jsonify({'status': 'error', 'message': 'Missing version or filemd5'}), 400
+
+        # Here you would normally create the task in your system
+        return jsonify({
+            'status': 'success',
+            'message': 'Version file upload task created successfully',
+            'data': {
+                'version': version,
+                'file_url': file_url
+            }
+        }), 201
+    
+    @app.route('/api/upload_file_chunk', methods=['POST'])
+    def upload_file_chunk():
+        def get_error_message(status_code):
+            error_messages = {
+                upload.ChunkStatus.TASK_NOT_EXIST: ('Upload task does not exist', 500),
+                upload.ChunkStatus.CHUNK_ID_INVALID: ('Invalid chunk ID', 500),
+                upload.ChunkStatus.ALREADY_EXISTS: ('Chunk already uploaded', 200),
+                upload.ChunkStatus.MD5_MISMATCH: ('Chunk MD5 mismatch', 500),
+            }
+            return error_messages.get(status_code, 'Unknown error')
+
+        task_id = request.form.get('task_id')
+        chunk_index = request.form.get('chunk_index')
+        chunk_content = request.files.get('chunk_data')
+     
+        status = upload.upload_chunk(task_id, chunk_index, chunk_content.read())
+        if status != upload.ChunkStatus.JOB_FINISHED:
+            message, code = get_error_message(status)
+            return jsonify({'status': 'error', 'message': message}), code
+        return jsonify({'status': 'success', 'message': 'Chunk uploaded successfully'}), 201
+    
+    @app.route('/api/finish_file_upload_task', methods=['POST'])
+    def finish_file_upload_task():
+        def get_error_message(status_code):
+            error_messages = {
+                upload.TaskStatus.TASK_NOT_EXIST: ('Upload task does not exist', 500),
+                upload.TaskStatus.TASK_NOT_COMPLETE: ('Upload task not complete', 500),
+                upload.TaskStatus.MD5_MISMATCH: ('Upload task MD5 mismatch', 500),
+            }
+            return error_messages.get(status_code, 'Unknown error')
+
+
+        data = request.get_json()
+        task_id = request.form.get('task_id')
+        status = upload.finish_upload_task(task_id)
+        if status != upload.TaskStatus.COMPLETED:
+            message, code = get_error_message(status)
+            return jsonify({'status': 'error', 'message': message}), code
+        # Here you would normally finalize the task in your system
+        return jsonify({
+            'status': 'success',
+            'message': 'File upload task finalized successfully'
+        }), 201
+    
     
     @app.route('/api/version')
     def version():

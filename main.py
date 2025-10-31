@@ -193,6 +193,24 @@ def create_app(config=None):
             'message': 'File upload task finalized successfully'
         }), 201
     
+    @app.route('/api/get_app_version')
+    def get_app_version_info():
+        with get_json_data('files/apps/index.json') as index_data:
+            pass
+        return jsonify({
+            'status': 'success',
+            'message': 'App version info fetched successfully',
+            'data': index_data
+        })
+    
+    def download_file(file_path):
+        if not os.path.exists(file_path):
+            return None
+        with open(file_path, 'rb') as f:
+            return f.read()
+        
+    
+    
     
     @app.route('/api/version')
     def version():

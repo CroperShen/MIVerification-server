@@ -1,15 +1,15 @@
 import os
 import common as mm
 def write_supervisor_conf(aimdir = "/etc/supervisor/conf.d/MIVerification-server.conf"):
-    app_file_path = mm.get_abs_path("app.py")
-    app_directory_path = mm.cur_dir()
+    main_file_path = mm.get_abs_path("main.py")
+    main_directory_path = mm.cur_dir()
     templateFile = "template/MIVerification-server.conf"
 
     content = ""
     with open(templateFile, 'r') as template_file:
         content = template_file.read()
-        content = content.replace("{APP_FILE_PATH}", app_file_path)
-        content = content.replace("{APP_DIRECTORY}", app_directory_path)
+        content = content.replace("{MAIN_FILE_PATH}", main_file_path)
+        content = content.replace("{MAIN_DIRECTORY}", main_directory_path)
     with open(aimdir, 'w') as conf_file:
         conf_file.write(content)
     print(f"Supervisor configuration written to {aimdir}")

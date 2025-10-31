@@ -10,6 +10,7 @@ import json
 import upload
 import regex
 from common import get_json_data
+import appmanager
 
 # Load environment variables
 load_dotenv()
@@ -170,22 +171,9 @@ def create_app(config=None):
             message, code = get_error_message(status)
             return jsonify({'status': 'error', 'message': message}), code
 
-        dest_dir = task_info["file_destination"]
-        extra_data = task_info.get("extra_data", {})
-        buildno =  int(extra_data.get("build_no", 0))
-        is_debug = extra_data.get("is_debug", False)
-        with get_json_data('files/apps/index.json') as index_data:
-            if buildno > index_data.get("latest_build_no", 0):
-                index_data["latest_build_no"] = buildno
-            else:
-                print("build no冲突，顺延build no")
-                buildno = int(index_data.get("latest_build_no", 0)) + 1
-                index_data["latest_build_no"] = buildno
-                with get_json_data(f"{dest_dir}/meta.json") as buildno_data:
-                    buildno_data["build_no"] = buildno
-
-            app_type = "debug" if is_debug else "release"
-            index_data[f'last_{app_type}_version'] = extra_data.get("version", "")
+        is_debug = task_info.get("is_debug", False)
+        version = task_info.get("version", "v0.0.0")
+        appmanager.add_app_meta_file(version,is_debug, task_info) 
 
         # Here you would normally finalize the task in your system
         return jsonify({
@@ -195,7 +183,8 @@ def create_app(config=None):
     
     @app.route('/api/get_app_version')
     def get_app_version_info():
-        with get_json_data('files/apps/index.json') as index_data:
+        index_file_path = appmanager.get_index_file_path()
+        with get_json_data(index_file_path) as index_data:
             pass
         return jsonify({
             'status': 'success',
@@ -203,14 +192,18 @@ def create_app(config=None):
             'data': index_data
         })
     
-    def download_file(file_path):
-        if not os.path.exists(file_path):
-            return None
-        with open(file_path, 'rb') as f:
-            return f.read()
+
+    @app.route('/api/download_app_chunk')
+    def download_app_chunk():
+        app_file_version = request.args.get('version')
+        is_debug = request.args.get('is_debug', 'false').lower() == 'true'
+        chunk_index = request.args.get('chunk_index', -1)
+
+        data = appmanager.get_app_chunk_file_data(app_file_version,is_debug, chunk_index)
+        if (data is None):
+            return jsonify({'status': 'error', 'message': 'Chunk not found'}), 501
+        return data, 200, {'Content-Type': 'application/octet-stream'}
         
-    
-    
     
     @app.route('/api/version')
     def version():

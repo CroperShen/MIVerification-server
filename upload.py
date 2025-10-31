@@ -44,7 +44,7 @@ def create_upload_tasks(file_md5,file_size,file_destination,extra_data:dict|None
         task_info["file_destination"] = file_destination
         task_info["task_created_at"] = task_created_at
         if extra_data:
-            task_info["extra_data"] = extra_data
+            task_info.update(extra_data)
  
     with get_json_data('upload_tasks/index.json') as index_data:
         if file_md5 in index_data:
@@ -66,7 +66,7 @@ def check_chunk_status(task_id,chunk_index = -1):
     if (chunk_index < 0):
         return ChunkStatus.CHUNK_ID_INVALID
 
-    if os.path.exists(os.path.join(task_dir, f'part_{chunk_index:02d}.chunk')):
+    if os.path.exists(os.path.join(task_dir, f'part_{chunk_index:03d}.chunk')):
         return ChunkStatus.ALREADY_EXISTS
     return ChunkStatus.READY
 
@@ -99,22 +99,16 @@ def finish_upload_tasks(task_id):
     task_md5 = task_info.get("file_md5","")
     if md5 != task_md5:
         return TaskStatus.MD5_MISMATCH
-
     dest = task_info.get("file_destination","")
     os.makedirs(dest, exist_ok=True)
     for f in chunk_file_list:
         shutil.move(os.path.join(task_dir, f), os.path.join(dest, f))
-    if task_info.get("extra_data"):
-        with open(os.path.join(dest, 'meta.json'), 'w') as extra_file:
-            json.dump(task_info["extra_data"], extra_file)
 
     shutil.rmtree(task_dir)
     with get_json_data('upload_tasks/index.json') as index_data:
         index_data.pop(task_md5,None)
  
     return TaskStatus.COMPLETED
-
- 
  
     
 def upload_chunk(task_id,chunk_index,chunk_content):
@@ -124,9 +118,10 @@ def upload_chunk(task_id,chunk_index,chunk_content):
     if status != ChunkStatus.READY:
         return status
     md5 = hashlib.md5(chunk_content).hexdigest()
-    with open(os.path.join(task_dir, f'part_{chunk_index:02d}.chunk'), 'wb') as chunk_file:
+    with open(os.path.join(task_dir, f'part_{chunk_index:03d}.chunk'), 'wb') as chunk_file:
         chunk_file.write(chunk_content)
     return ChunkStatus.JOB_FINISHED
+
 
 
     

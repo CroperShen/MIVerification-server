@@ -82,8 +82,8 @@ def create_app(config=None):
             }
         }), 201
     
-    @app.route('/api/create_app_upload_tasks', methods=['POST'])
-    def create_version_file_upload_tasks():
+    @app.route('/api/create_app_upload_task', methods=['POST'])
+    def create_version_file_upload_task():
         version = request.form["version"]
         is_debug = request.form.get("is_debug", "false").lower() == "true"
         file_size = request.form["file_size"]
@@ -151,8 +151,8 @@ def create_app(config=None):
             return jsonify({'status': 'error', 'message': message}), code
         return jsonify({'status': 'success', 'message': 'Chunk uploaded successfully'}), 201
     
-    @app.route('/api/finish_file_upload_tasks', methods=['POST'])
-    def finish_file_upload_tasks():
+    @app.route('/api/finish_file_upload_task', methods=['POST'])
+    def finish_file_upload_task():
         def get_error_message(status_code):
             error_messages = {
                 upload.TaskStatus.TASK_NOT_EXIST: ('Upload task does not exist', 500),

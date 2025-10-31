@@ -208,3 +208,5 @@ __marimo__/
 cert/privkey.pem
 
 /static/rules/
+/files/
+/upload_tasks/

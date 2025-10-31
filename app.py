@@ -13,7 +13,7 @@ from common import get_json_data
 
 # Load environment variables
 load_dotenv()
-server_version = "0.1.1"
+server_version = "0.1.2"
 
 def create_app(config=None):
     """Application factory pattern"""

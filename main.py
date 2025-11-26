@@ -84,7 +84,7 @@ def create_app(config=None):
         }), 201
     
     @app.route('/api/create_app_upload_task', methods=['POST'])
-    def create_version_file_upload_task():
+    def create_app_upload_task():
         version = request.form["version"]
         is_debug = request.form.get("is_debug", "false").lower() == "true"
         file_size = request.form["file_size"]
@@ -102,29 +102,16 @@ def create_app(config=None):
             else:
                 return jsonify({'status': 'error', 'message': 'Invalid file size'}), 400
         
-        #check version valid
-        version_pattern = r'^v\d+\.\d+\.\d+[a-z]?$'  # e.g., 1.0.0 or  1.0.0a
-        file_dir = f"files/apps/releases/{version}/"
-        if is_debug:
-            version_pattern = r'^v\d+\.\d+\.\d+\.(\d+)$'  # e.g., 1.0.0.1234 for debug versions
-            file_dir = f"files/apps/debug/{version}/"
-        if not regex.match(version_pattern, version):
-            return jsonify({'status': 'error', 'message': 'Invalid version format'}), 400
-        
-        if (os.path.exists(file_dir) and not replace_existing):
-            return jsonify({'status': 'error', 'message': 'Version already exists'}), 400
-        
-        with get_json_data('files/apps/index.json') as data:
-            buildno = int(data.get("latest_build_no",0 ))
- 
-        buildno += 1
         extra_data = {
             "version": version,
             "is_debug": is_debug,
-            "build_no": buildno,
             "desc": desc
         }
-        task_id = upload.create_upload_tasks(file_md5,file_size,file_dir, extra_data)
+        task_id = upload.create_upload_tasks(file_md5,file_size,"", extra_data)
+        if task_id is None:
+            return jsonify({'status': 'error', 'message': 'Failed to create upload task'}), 500 
+        temp_name = f'{version}.{task_id}'
+        upload.set_task_destination(task_id,f"{appmanager.get_app_file_path_by_name(temp_name,is_debug)}")
         return jsonify({
             'status': 'success',
             'task_id': task_id,
@@ -171,9 +158,8 @@ def create_app(config=None):
             message, code = get_error_message(status)
             return jsonify({'status': 'error', 'message': message}), code
 
-        is_debug = task_info.get("is_debug", False)
-        version = task_info.get("version", "v0.0.0")
-        appmanager.add_app_meta_file(version,is_debug, task_info) 
+        file_path = task_info.get("file_destination", "")
+        appmanager.add_app_meta_file(file_path) 
 
         # Here you would normally finalize the task in your system
         return jsonify({
@@ -183,9 +169,8 @@ def create_app(config=None):
     
     @app.route('/api/get_app_version')
     def get_app_version_info():
-        index_file_path = appmanager.get_index_file_path()
-        with get_json_data(index_file_path) as index_data:
-            pass
+        is_debug = request.args.get('is_debug', 'false').lower() == 'true'
+        index_data = appmanager.get_version_info_list(is_debug)
         return jsonify({
             'status': 'success',
             'message': 'App version info fetched successfully',
@@ -195,11 +180,18 @@ def create_app(config=None):
 
     @app.route('/api/download_app_chunk')
     def download_app_chunk():
-        app_file_version = request.args.get('version')
+        build_no = request.args.get('build_no')
+        info = appmanager.get_version_info(build_no)
+        if info is None:
+            return jsonify({'status': 'error', 'message': 'Build number not found'}), 501
+        app_file_version = info.get("build_no", -1)
         is_debug = request.args.get('is_debug', 'false').lower() == 'true'
         chunk_index = request.args.get('chunk_index', -1)
-
-        data = appmanager.get_app_chunk_file_data(app_file_version,is_debug, chunk_index)
+        try:
+            chunk_index = int(chunk_index)
+        except ValueError:
+            return jsonify({'status': 'error', 'message': 'Invalid chunk index'}), 400
+        data = appmanager.get_app_chunk_file_data(app_file_version,chunk_index)
         if (data is None):
             return jsonify({'status': 'error', 'message': 'Chunk not found'}), 501
         return data, 200, {'Content-Type': 'application/octet-stream'}

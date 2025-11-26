@@ -37,7 +37,7 @@ def create_upload_tasks(file_md5,file_size,file_destination,extra_data:dict|None
     task_dir = os.path.join("upload_tasks", task_id)
     os.makedirs(task_dir, exist_ok=True)
 
-    with get_json_data(os.path.join(task_dir, 'task_info.json')) as task_info:
+    with get_json_data(os.path.join(task_dir, 'upload_task_info.json')) as task_info:
         task_info["task_id"] = task_id
         task_info["file_md5"] = file_md5
         task_info["file_size"] = file_size
@@ -74,8 +74,16 @@ def get_task_info(task_id):
     task_dir = os.path.join("upload_tasks", task_id)
     if not os.path.exists(task_dir):
         return None
-    with get_json_data(os.path.join(task_dir, 'task_info.json')) as task_info:
+    with get_json_data(os.path.join(task_dir, 'upload_task_info.json')) as task_info:
         return task_info
+    
+def set_task_destination(task_id,new_destination):
+    task_dir = os.path.join("upload_tasks", task_id)
+    if not os.path.exists(task_dir):
+        return False
+    with get_json_data(os.path.join(task_dir, 'upload_task_info.json')) as task_info:
+        task_info["file_destination"] = new_destination
+    return True
     
 def finish_upload_tasks(task_id):
     task_dir = os.path.join("upload_tasks", task_id)
@@ -93,18 +101,14 @@ def finish_upload_tasks(task_id):
             data += chunk_file.read()
     md5 = hashlib.md5(data).hexdigest()
     
-    with get_json_data(os.path.join(task_dir, 'task_info.json')) as task_info:
+    with get_json_data(os.path.join(task_dir, 'upload_task_info.json')) as task_info:
         pass
 
     task_md5 = task_info.get("file_md5","")
     if md5 != task_md5:
         return TaskStatus.MD5_MISMATCH
     dest = task_info.get("file_destination","")
-    os.makedirs(dest, exist_ok=True)
-    for f in chunk_file_list:
-        shutil.move(os.path.join(task_dir, f), os.path.join(dest, f))
-
-    shutil.rmtree(task_dir)
+    shutil.move(task_dir,dest)
     with get_json_data('upload_tasks/index.json') as index_data:
         index_data.pop(task_md5,None)
  
